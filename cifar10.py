@@ -10,8 +10,10 @@ from datasets import load_dataset
 
 from args import get_args
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print("Using device: %s" % device)
+cuda_available = torch.cuda.is_available()
+device = torch.device("cuda" if cuda_available else "cpu")
+gpu_name = torch.cuda.get_device_name(torch.cuda.current_device()) if cuda_available else "cpu"
+print("Using device: %s (GPU: %s)" % (device, gpu_name))
 
 def train(model, dataloader, criterion, optimizer, log=True):
     model.train()
@@ -53,7 +55,7 @@ def train(model, dataloader, criterion, optimizer, log=True):
     if log:
         with open("data/local_steps_time.csv", "a") as f:
             for step_time in local_step_times:
-                f.write(f"{args.model},cifar10,{args.batch_size},{step_time:.4f}\n")
+                f.write(f"{gpu_name},{args.model},cifar10,{args.batch_size},{step_time:.4f}\n")
 
     accuracy = 100. * correct / total
     return running_loss / len(dataloader), accuracy
@@ -64,26 +66,26 @@ def init_data_dir():
 
     if not os.path.exists("data/model_load_times.csv"):
         with open("data/model_load_times.csv", "w") as f:
-            f.write("model,dataset,load_time\n")
+            f.write("gpu,model,dataset,load_time\n")
 
     if not os.path.exists("data/local_steps_time.csv"):
         with open("data/local_steps_time.csv", "w") as f:
-            f.write("model,dataset,batch_size,step_time\n")
+            f.write("gpu,model,dataset,batch_size,step_time\n")
 
-def get_model(args):
-    if args.model == "resnet18":
+def get_model(model_name):
+    if model_name == "resnet18":
         from torchvision.models import resnet18
         return resnet18(num_classes=10)
-    elif args.model == "resnet34":
+    elif model_name == "resnet34":
         from torchvision.models import resnet34
         return resnet34(num_classes=10)
-    elif args.model == "resnet50":
+    elif model_name == "resnet50":
         from torchvision.models import resnet50
         return resnet50(num_classes=10)
-    elif args.model == "resnet101":
+    elif model_name == "resnet101":
         from torchvision.models import resnet101
         return resnet101(num_classes=10)
-    elif args.model == "resnet152":
+    elif model_name == "resnet152":
         from torchvision.models import resnet152
         return resnet152(num_classes=10)
 
@@ -110,28 +112,31 @@ def benchmark(args):
     train_dataset = data["train"].with_transform(lambda x: preprocess_function(x, transform_train))
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=lambda x: x, drop_last=True)
 
-    model = get_model(args)
+    models_to_test = ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152"] if args.test_all else [args.model]
+    for model_name in models_to_test:
+        print("Testing model: %s" % model_name)
+        model = get_model(model_name)
 
-    start_time = time.time()
-    model = model.to(device)
-    elapsed_time = time.time() - start_time
-    print("Model loaded to device in %.2f seconds." % elapsed_time)
-    with open("data/model_load_times.csv", "a") as f:
-        f.write(f"{args.model},cifar10,{elapsed_time:.4f}\n")
+        start_time = time.time()
+        model = model.to(device)
+        elapsed_time = time.time() - start_time
+        print("Model loaded to device in %.2f seconds." % elapsed_time)
+        with open("data/model_load_times.csv", "a") as f:
+            f.write(f"{gpu_name},{args.model},cifar10,{elapsed_time:.4f}\n")
 
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
 
-    # First, we perform a single epoch to warm up the GPU and caches
-    print("Running warm-up epoch")
-    _ = train(model, train_loader, criterion, optimizer, log=False)
+        # First, we perform a single epoch to warm up the GPU and caches
+        print("Running warm-up epoch")
+        _ = train(model, train_loader, criterion, optimizer, log=False)
 
-    # Main training loop
-    for epoch in range(args.num_epochs):
-        train_loss, train_accuracy = train(model, train_loader, criterion, optimizer)
+        # Main training loop
+        for epoch in range(args.num_epochs):
+            train_loss, train_accuracy = train(model, train_loader, criterion, optimizer)
 
-        print(f"Epoch {epoch+1}/{args.num_epochs}")
-        print(f"Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy:.2f}%")
+            print(f"Epoch {epoch+1}/{args.num_epochs}")
+            print(f"Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy:.2f}%")
 
     print("Benchmark completed.")
 
