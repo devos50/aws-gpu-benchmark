@@ -92,7 +92,7 @@ def get_model(model_name):
         return resnet152(num_classes=10)
     elif "vit" in model_name:
         from transformers import ViTForImageClassification
-        model = ViTForImageClassification.from_pretrained('google/%s' % model_name)
+        return ViTForImageClassification.from_pretrained('google/%s' % model_name)
 
 def get_transformation(model_name):
     if "vit" in model_name:
