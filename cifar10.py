@@ -31,7 +31,8 @@ def train(model, model_name: str, dataloader, criterion, optimizer, log=True, ma
         start_time_data_load = time.time()
         images = torch.stack([item["images"] for item in batch]).to(device)
         labels = torch.tensor([item["labels"] for item in batch]).to(device)
-        torch.cuda.synchronize()
+        if cuda_available:
+            torch.cuda.synchronize()
         elapsed_time_data_load = time.time() - start_time_data_load
 
         # Forward pass
@@ -41,14 +42,16 @@ def train(model, model_name: str, dataloader, criterion, optimizer, log=True, ma
         if "vit" in model_name:
             outputs = outputs.logits
         loss = criterion(outputs, labels)
-        torch.cuda.synchronize()
+        if cuda_available:
+            torch.cuda.synchronize()
         elapsed_time_forward = time.time() - start_time_forward
 
         # Backward pass
         start_time_backward = time.time()
         loss.backward()
         optimizer.step()
-        torch.cuda.synchronize()
+        if cuda_available:
+            torch.cuda.synchronize()
         elapsed_time_backward = time.time() - start_time_backward
 
         running_loss += loss.item()
@@ -113,6 +116,8 @@ def benchmark(args):
 
         start_time = time.time()
         model = model.to(device)
+        if cuda_available:
+            torch.cuda.synchronize()
         elapsed_time = time.time() - start_time
         print("Model loaded to device in %.2f seconds." % elapsed_time)
         with open("data/model_load_times.csv", "a") as f:
