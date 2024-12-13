@@ -4,11 +4,11 @@ import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision.transforms import Compose, ToTensor, Normalize, RandomHorizontalFlip, RandomCrop
+from torchvision.transforms import Compose, Resize, ToTensor, Normalize, RandomHorizontalFlip, RandomCrop
 from torch.utils.data import DataLoader
 from datasets import load_dataset
 
-from args import get_args
+from args import get_args, SUPPORTED_MODELS
 
 cuda_available = torch.cuda.is_available()
 device = torch.device("cuda" if cuda_available else "cpu")
@@ -31,6 +31,8 @@ def train(model, dataloader, criterion, optimizer, log=True):
 
         optimizer.zero_grad()
         outputs = model(images)
+        if args.model == "vit":
+            outputs = outputs.logits
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
@@ -88,6 +90,18 @@ def get_model(model_name):
     elif model_name == "resnet152":
         from torchvision.models import resnet152
         return resnet152(num_classes=10)
+    elif model_name == "vit":
+        from transformers import ViTForImageClassification, ViTConfig
+        config = ViTConfig(
+            hidden_size=128,       # Size of transformer embeddings
+            num_hidden_layers=4,   # Number of transformer layers
+            num_attention_heads=4, # Number of attention heads
+            intermediate_size=256, # Size of feed-forward layers
+            image_size=224,        # Input image resolution
+            patch_size=16,         # Patch size
+            num_labels=10          # Number of classes (CIFAR-10)
+        )
+        return ViTForImageClassification(config)
 
 def benchmark(args):
     init_data_dir()
@@ -96,12 +110,19 @@ def benchmark(args):
     data = load_dataset("cifar10")
 
     # Data preprocessing
-    transform_train = Compose([
-        RandomCrop(32, padding=4),
-        RandomHorizontalFlip(),
-        ToTensor(),
-        Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-    ])
+    if args.model == "vit":
+        transform_train = Compose([
+            Resize((224, 224)),  # Resize images to 224x224
+            ToTensor(),         # Convert to tensor
+            Normalize((0.5,), (0.5,))  # Normalize to [-1, 1]
+        ])
+    else:
+        transform_train = Compose([
+            RandomCrop(32, padding=4),
+            RandomHorizontalFlip(),
+            ToTensor(),
+            Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+        ])
 
     # Prepare datasets and dataloaders
     def preprocess_function(examples, transform):
@@ -112,7 +133,7 @@ def benchmark(args):
     train_dataset = data["train"].with_transform(lambda x: preprocess_function(x, transform_train))
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=lambda x: x, drop_last=True)
 
-    models_to_test = ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152"] if args.test_all else [args.model]
+    models_to_test = SUPPORTED_MODELS if args.test_all else [args.model]
     for model_name in models_to_test:
         print("Testing model: %s" % model_name)
         model = get_model(model_name)
