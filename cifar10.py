@@ -22,6 +22,7 @@ def train(model, dataloader, criterion, optimizer, log=True):
     steps = 0
 
     epoch_start_time = time.time()
+    local_step_times = []
     for batch in dataloader:
         start_time = time.time()
         images = torch.stack([item["images"] for item in batch]).to(device)
@@ -41,8 +42,7 @@ def train(model, dataloader, criterion, optimizer, log=True):
 
         elapsed_time = time.time() - start_time
         if log:
-            with open("data/local_steps_time.csv", "a") as f:
-                f.write(f"{args.model},cifar10,{elapsed_time:.4f}\n")
+            local_step_times.append(elapsed_time)
 
         # Clear GPU memory
         del images, labels, outputs
@@ -50,6 +50,11 @@ def train(model, dataloader, criterion, optimizer, log=True):
 
     elapsed_epoch_time = time.time() - epoch_start_time
     print("Running one epoch (%d steps) took %.2f seconds." % (steps, elapsed_epoch_time))
+
+    if log:
+        with open("data/local_steps_time.csv", "a") as f:
+            for step_time in local_step_times:
+                f.write(f"{args.model},cifar10,{step_time:.4f}\n")
 
     accuracy = 100. * correct / total
     return running_loss / len(dataloader), accuracy
