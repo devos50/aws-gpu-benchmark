@@ -54,7 +54,7 @@ def train(model, dataloader, criterion, optimizer, log=True):
     if log:
         with open("data/local_steps_time.csv", "a") as f:
             for step_time in local_step_times:
-                f.write(f"{args.model},cifar10,{step_time:.4f}\n")
+                f.write(f"{args.model},cifar10,{args.batch_size},{step_time:.4f}\n")
 
     accuracy = 100. * correct / total
     return running_loss / len(dataloader), accuracy
@@ -69,7 +69,7 @@ def init_data_dir():
 
     if not os.path.exists("data/local_steps_time.csv"):
         with open("data/local_steps_time.csv", "w") as f:
-            f.write("model,dataset,step_time\n")
+            f.write("model,dataset,batch_size,step_time\n")
 
 def benchmark(args):
     init_data_dir()
