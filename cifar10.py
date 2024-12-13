@@ -31,7 +31,7 @@ def train(model, model_name: str, dataloader, criterion, optimizer, log=True):
 
         optimizer.zero_grad()
         outputs = model(images)
-        if model_name == "vit":
+        if "vit" in model_name:
             outputs = outputs.logits
         loss = criterion(outputs, labels)
         loss.backward()
@@ -90,25 +90,16 @@ def get_model(model_name):
     elif model_name == "resnet152":
         from torchvision.models import resnet152
         return resnet152(num_classes=10)
-    elif model_name == "vit":
-        from transformers import ViTForImageClassification, ViTConfig
-        config = ViTConfig(
-            hidden_size=128,       # Size of transformer embeddings
-            num_hidden_layers=4,   # Number of transformer layers
-            num_attention_heads=4, # Number of attention heads
-            intermediate_size=256, # Size of feed-forward layers
-            image_size=224,        # Input image resolution
-            patch_size=16,         # Patch size
-            num_labels=10          # Number of classes (CIFAR-10)
-        )
-        return ViTForImageClassification(config)
+    elif "vit" in model_name:
+        from transformers import ViTForImageClassification
+        model = ViTForImageClassification.from_pretrained('google/%s' % model_name)
 
 def get_transformation(model_name):
-    if args.model == "vit":
+    if "vit" in model_name:
         return Compose([
-            Resize((224, 224)),  # Resize images to 224x224
-            ToTensor(),         # Convert to tensor
-            Normalize((0.5,), (0.5,))  # Normalize to [-1, 1]
+            Resize((224, 224)),
+            ToTensor(),
+            Normalize((0.5,), (0.5,))
         ])
     else:
         return Compose([
