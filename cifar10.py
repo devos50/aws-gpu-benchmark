@@ -4,11 +4,13 @@ import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision.transforms import Compose, Resize, ToTensor, Normalize, RandomHorizontalFlip, RandomCrop
 from torch.utils.data import DataLoader
 from datasets import load_dataset
 
 from args import get_args, SUPPORTED_MODELS
+from models import get_model
+from transformations import get_transformation
+
 
 cuda_available = torch.cuda.is_available()
 device = torch.device("cuda" if cuda_available else "cpu")
@@ -73,41 +75,6 @@ def init_data_dir():
     if not os.path.exists("data/local_steps_time.csv"):
         with open("data/local_steps_time.csv", "w") as f:
             f.write("gpu,model,dataset,batch_size,step_time\n")
-
-def get_model(model_name):
-    if model_name == "resnet18":
-        from torchvision.models import resnet18
-        return resnet18(num_classes=10)
-    elif model_name == "resnet34":
-        from torchvision.models import resnet34
-        return resnet34(num_classes=10)
-    elif model_name == "resnet50":
-        from torchvision.models import resnet50
-        return resnet50(num_classes=10)
-    elif model_name == "resnet101":
-        from torchvision.models import resnet101
-        return resnet101(num_classes=10)
-    elif model_name == "resnet152":
-        from torchvision.models import resnet152
-        return resnet152(num_classes=10)
-    elif "vit" in model_name:
-        from transformers import ViTForImageClassification
-        return ViTForImageClassification.from_pretrained('google/%s' % model_name)
-
-def get_transformation(model_name):
-    if "vit" in model_name:
-        return Compose([
-            Resize((224, 224)),
-            ToTensor(),
-            Normalize((0.5,), (0.5,))
-        ])
-    else:
-        return Compose([
-            RandomCrop(32, padding=4),
-            RandomHorizontalFlip(),
-            ToTensor(),
-            Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-        ])
 
 def benchmark(args):
     init_data_dir()
