@@ -17,7 +17,7 @@ device = torch.device("cuda" if cuda_available else "cpu")
 gpu_name = torch.cuda.get_device_name(torch.cuda.current_device()) if cuda_available else "cpu"
 print("Using device: %s (GPU: %s)" % (device, gpu_name))
 
-def train(model, model_name: str, dataloader, criterion, optimizer, log=True):
+def train(model, model_name: str, dataloader, criterion, optimizer, log=True, max_steps=None):
     model.train()
     running_loss = 0.0
     correct = 0
@@ -44,6 +44,8 @@ def train(model, model_name: str, dataloader, criterion, optimizer, log=True):
         total += labels.size(0)
         correct += predicted.eq(labels).sum().item()
         steps += 1
+        if max_steps is not None and steps >= max_steps:
+            break
 
         elapsed_time = time.time() - start_time
         if log:
@@ -107,9 +109,9 @@ def benchmark(args):
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
 
-        # First, we perform a single epoch to warm up the GPU and caches
+        # First, we perform a few batches to warm up the GPU and caches
         print("Running warm-up epoch")
-        _ = train(model, model_name, train_loader, criterion, optimizer, log=False)
+        _ = train(model, model_name, train_loader, criterion, optimizer, log=False, max_steps=20)
 
         # Main training loop
         for epoch in range(args.num_epochs):
