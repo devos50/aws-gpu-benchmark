@@ -4,7 +4,6 @@ import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision.models import resnet18
 from torchvision.transforms import Compose, ToTensor, Normalize, RandomHorizontalFlip, RandomCrop
 from torch.utils.data import DataLoader
 from datasets import load_dataset
@@ -71,6 +70,23 @@ def init_data_dir():
         with open("data/local_steps_time.csv", "w") as f:
             f.write("model,dataset,batch_size,step_time\n")
 
+def get_model(args):
+    if args.model == "resnet18":
+        from torchvision.models import resnet18
+        return resnet18(num_classes=10)
+    elif args.model == "resnet34":
+        from torchvision.models import resnet34
+        return resnet34(num_classes=10)
+    elif args.model == "resnet50":
+        from torchvision.models import resnet50
+        return resnet50(num_classes=10)
+    elif args.model == "resnet101":
+        from torchvision.models import resnet101
+        return resnet101(num_classes=10)
+    elif args.model == "resnet152":
+        from torchvision.models import resnet152
+        return resnet152(num_classes=10)
+
 def benchmark(args):
     init_data_dir()
 
@@ -94,8 +110,7 @@ def benchmark(args):
     train_dataset = data["train"].with_transform(lambda x: preprocess_function(x, transform_train))
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=lambda x: x, drop_last=True)
 
-    # Define model, loss, and optimizer
-    model = resnet18(num_classes=10)
+    model = get_model(args)
 
     start_time = time.time()
     model = model.to(device)
