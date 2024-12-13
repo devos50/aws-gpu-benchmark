@@ -9,8 +9,8 @@ data <- read.csv("../data/local_steps_time.csv")
 summary_data <- data %>%
     group_by(gpu, model, dataset, batch_size) %>%
     summarise(
-        avg_time = mean(step_time),
-        sd_time = sd(step_time)
+        avg_time = mean(time_total),
+        sd_time = sd(time_total)
     )
 
 summary_data$model <- factor(summary_data$model, levels = c("resnet18", "resnet34", "resnet50", "resnet101", "resnet152", "vit-base-patch16-224", "vit-large-patch16-224"))
@@ -28,4 +28,4 @@ p <- ggplot(summary_data, aes(x = model, y = avg_time, fill = gpu)) +
      )
 
 # Save the plot to a PDF file
-ggsave("../data/local_step_time.pdf", p, width=6, height=3)
+ggsave("../data/local_step_time_total.pdf", p, width=6, height=3)
