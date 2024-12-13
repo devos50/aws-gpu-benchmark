@@ -1,3 +1,4 @@
+import os
 import time
 
 import torch
@@ -8,62 +9,21 @@ from torchvision.transforms import Compose, ToTensor, Normalize, RandomHorizonta
 from torch.utils.data import DataLoader
 from datasets import load_dataset
 
-# Configuration
-batch_size = 128
-num_epochs = 5
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+from args import get_args
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device: %s" % device)
 
-# Load CIFAR-10 dataset using Hugging Face
-data = load_dataset("cifar10")
-
-# Data preprocessing
-transform_train = Compose([
-    RandomCrop(32, padding=4),
-    RandomHorizontalFlip(),
-    ToTensor(),
-    Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-])
-
-transform_test = Compose([
-    ToTensor(),
-    Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-])
-
-# Prepare datasets and dataloaders
-def preprocess_function(examples, transform):
-    images = [transform(image.convert("RGB")) for image in examples["img"]]
-    labels = examples["label"]
-    return {"images": images, "labels": labels}
-
-train_dataset = data["train"].with_transform(lambda x: preprocess_function(x, transform_train))
-test_dataset = data["test"].with_transform(lambda x: preprocess_function(x, transform_test))
-
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=lambda x: x, drop_last=True)
-test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=lambda x: x, drop_last=True)
-
-# Define model, loss, and optimizer
-model = resnet18(num_classes=10)
-
-start_time = time.time()
-model = model.to(device)
-elapsed_time = time.time() - start_time
-print("Model loaded to device in %.2f seconds." % elapsed_time)
-
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
-
-# Training loop
-def train(model, dataloader, criterion, optimizer):
+def train(model, dataloader, criterion, optimizer, log=True):
     model.train()
     running_loss = 0.0
     correct = 0
     total = 0
     steps = 0
 
-    start_time = time.time()
+    epoch_start_time = time.time()
     for batch in dataloader:
+        start_time = time.time()
         images = torch.stack([item["images"] for item in batch]).to(device)
         labels = torch.tensor([item["labels"] for item in batch]).to(device)
 
@@ -79,23 +39,81 @@ def train(model, dataloader, criterion, optimizer):
         correct += predicted.eq(labels).sum().item()
         steps += 1
 
-    elapsed_time = time.time() - start_time
-    print("Running %d steps took %.2f seconds." % (steps, elapsed_time))
+        elapsed_time = time.time() - start_time
+        if log:
+            with open("data/local_steps_time.csv", "a") as f:
+                f.write(f"{args.model},cifar10,{elapsed_time:.3f}\n")
+
+        # Clear GPU memory
+        del images, labels, outputs
+        torch.cuda.empty_cache()
+
+    elapsed_epoch_time = time.time() - epoch_start_time
+    print("Running one epoch (%d steps) took %.2f seconds." % (steps, epoch_start_time))
 
     accuracy = 100. * correct / total
     return running_loss / len(dataloader), accuracy
 
-# Main script
-for epoch in range(num_epochs):
-    train_loss, train_accuracy = train(model, train_loader, criterion, optimizer)
+def init_data_dir():
+    if not os.path.exists("data"):
+        os.makedirs("data")
 
-    print(f"Epoch {epoch+1}/{num_epochs}")
-    print(f"Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy:.2f}%")
+    if not os.path.exists("data/model_load_times.csv"):
+        with open("data/model_load_times.csv", "w") as f:
+            f.write("model,dataset,load_time\n")
 
-# Benchmarking the speed
-import time
+    if not os.path.exists("data/local_steps_time.csv"):
+        with open("data/local_steps_time.csv", "w") as f:
+            f.write("model,dataset,step_time\n")
 
-start_time = time.time()
-train_loss, train_accuracy = train(model, train_loader, criterion, optimizer)
-elapsed_time = time.time() - start_time
-print(f"Training took {elapsed_time:.2f} seconds for one epoch.")
+def benchmark(args):
+    init_data_dir()
+
+    # Load CIFAR-10 dataset using Hugging Face
+    data = load_dataset("cifar10")
+
+    # Data preprocessing
+    transform_train = Compose([
+        RandomCrop(32, padding=4),
+        RandomHorizontalFlip(),
+        ToTensor(),
+        Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+    ])
+
+    # Prepare datasets and dataloaders
+    def preprocess_function(examples, transform):
+        images = [transform(image.convert("RGB")) for image in examples["img"]]
+        labels = examples["label"]
+        return {"images": images, "labels": labels}
+
+    train_dataset = data["train"].with_transform(lambda x: preprocess_function(x, transform_train))
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=lambda x: x, drop_last=True)
+
+    # Define model, loss, and optimizer
+    model = resnet18(num_classes=10)
+
+    start_time = time.time()
+    model = model.to(device)
+    elapsed_time = time.time() - start_time
+    print("Model loaded to device in %.2f seconds." % elapsed_time)
+    with open("data/model_load_times.csv", "a") as f:
+        f.write(f"{args.model},cifar10,{elapsed_time:.3f}\n")
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
+
+    # First, we perform a single epoch to warm up the GPU and caches
+    _ = train(model, train_loader, criterion, optimizer, log=False)
+
+    # Main training loop
+    for epoch in range(args.num_epochs):
+        train_loss, train_accuracy = train(model, train_loader, criterion, optimizer)
+
+        print(f"Epoch {epoch+1}/{args.num_epochs}")
+        print(f"Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy:.2f}%")
+
+    print("Benchmark completed.")
+
+if __name__ == "__main__":
+    args = get_args()
+    benchmark(args)
