@@ -20,3 +20,4 @@ NVIDIA T4G,resnet101,cifar10,0.0678
 NVIDIA T4G,resnet152,cifar10,0.0991
 NVIDIA T4G,vit-base-patch16-224,cifar10,0.0865
 NVIDIA T4G,vit-large-patch16-224,cifar10,0.2746
+cpu,resnet18,cifar10,0.0024

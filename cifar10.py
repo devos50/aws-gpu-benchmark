@@ -25,19 +25,31 @@ def train(model, model_name: str, dataloader, criterion, optimizer, log=True, ma
     steps = 0
 
     epoch_start_time = time.time()
-    local_step_times = []
+    elapsed_times = []
     for batch in dataloader:
-        start_time = time.time()
+        # Load data
+        start_time_data_load = time.time()
         images = torch.stack([item["images"] for item in batch]).to(device)
         labels = torch.tensor([item["labels"] for item in batch]).to(device)
+        torch.cuda.synchronize()
+        elapsed_time_data_load = time.time() - start_time_data_load
 
+        # Forward pass
+        start_time_forward = time.time()
         optimizer.zero_grad()
         outputs = model(images)
         if "vit" in model_name:
             outputs = outputs.logits
         loss = criterion(outputs, labels)
+        torch.cuda.synchronize()
+        elapsed_time_forward = time.time() - start_time_forward
+
+        # Backward pass
+        start_time_backward = time.time()
         loss.backward()
         optimizer.step()
+        torch.cuda.synchronize()
+        elapsed_time_backward = time.time() - start_time_backward
 
         running_loss += loss.item()
         _, predicted = outputs.max(1)
@@ -47,9 +59,8 @@ def train(model, model_name: str, dataloader, criterion, optimizer, log=True, ma
         if max_steps is not None and steps >= max_steps:
             break
 
-        elapsed_time = time.time() - start_time
         if log:
-            local_step_times.append(elapsed_time)
+            elapsed_times.append((elapsed_time_data_load, elapsed_time_forward, elapsed_time_backward))
 
         # Clear GPU memory
         del images, labels, outputs
@@ -60,8 +71,9 @@ def train(model, model_name: str, dataloader, criterion, optimizer, log=True, ma
 
     if log:
         with open("data/local_steps_time.csv", "a") as f:
-            for step_time in local_step_times:
-                f.write(f"{gpu_name},{model_name},cifar10,{args.batch_size},{step_time:.4f}\n")
+            for elapsed_time_data_load, elapsed_time_forward, elapsed_time_backward in elapsed_times:
+                total_time = elapsed_time_data_load + elapsed_time_forward + elapsed_time_backward
+                f.write(f"{gpu_name},{model_name},cifar10,{args.batch_size},{elapsed_time_data_load:.4f},{elapsed_time_forward:.4f},{elapsed_time_backward:.4f},{total_time:.4f}\n")
 
     accuracy = 100. * correct / total
     return running_loss / len(dataloader), accuracy
@@ -76,7 +88,7 @@ def init_data_dir():
 
     if not os.path.exists("data/local_steps_time.csv"):
         with open("data/local_steps_time.csv", "w") as f:
-            f.write("gpu,model,dataset,batch_size,step_time\n")
+            f.write("gpu,model,dataset,batch_size,time_data,time_forward,time_backward,time_total\n")
 
 def benchmark(args):
     init_data_dir()
