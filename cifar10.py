@@ -110,8 +110,9 @@ def benchmark(args):
         optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
 
         # First, we perform a few batches to warm up the GPU and caches
-        print("Running warm-up epoch")
+        print("Running warm-up steps")
         _ = train(model, model_name, train_loader, criterion, optimizer, log=False, max_steps=20)
+        print("Warm-up steps completed")
 
         # Main training loop
         for epoch in range(args.num_epochs):
