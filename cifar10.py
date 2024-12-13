@@ -15,7 +15,7 @@ device = torch.device("cuda" if cuda_available else "cpu")
 gpu_name = torch.cuda.get_device_name(torch.cuda.current_device()) if cuda_available else "cpu"
 print("Using device: %s (GPU: %s)" % (device, gpu_name))
 
-def train(model, dataloader, criterion, optimizer, log=True):
+def train(model, model_name: str, dataloader, criterion, optimizer, log=True):
     model.train()
     running_loss = 0.0
     correct = 0
@@ -31,7 +31,7 @@ def train(model, dataloader, criterion, optimizer, log=True):
 
         optimizer.zero_grad()
         outputs = model(images)
-        if args.model == "vit":
+        if model_name == "vit":
             outputs = outputs.logits
         loss = criterion(outputs, labels)
         loss.backward()
@@ -57,7 +57,7 @@ def train(model, dataloader, criterion, optimizer, log=True):
     if log:
         with open("data/local_steps_time.csv", "a") as f:
             for step_time in local_step_times:
-                f.write(f"{gpu_name},{args.model},cifar10,{args.batch_size},{step_time:.4f}\n")
+                f.write(f"{gpu_name},{model_name},cifar10,{args.batch_size},{step_time:.4f}\n")
 
     accuracy = 100. * correct / total
     return running_loss / len(dataloader), accuracy
@@ -103,26 +103,26 @@ def get_model(model_name):
         )
         return ViTForImageClassification(config)
 
-def benchmark(args):
-    init_data_dir()
-
-    # Load CIFAR-10 dataset using Hugging Face
-    data = load_dataset("cifar10")
-
-    # Data preprocessing
+def get_transformation(model_name):
     if args.model == "vit":
-        transform_train = Compose([
+        return Compose([
             Resize((224, 224)),  # Resize images to 224x224
             ToTensor(),         # Convert to tensor
             Normalize((0.5,), (0.5,))  # Normalize to [-1, 1]
         ])
     else:
-        transform_train = Compose([
+        return Compose([
             RandomCrop(32, padding=4),
             RandomHorizontalFlip(),
             ToTensor(),
             Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
         ])
+
+def benchmark(args):
+    init_data_dir()
+
+    # Load CIFAR-10 dataset using Hugging Face
+    data = load_dataset("cifar10")
 
     # Prepare datasets and dataloaders
     def preprocess_function(examples, transform):
@@ -130,31 +130,32 @@ def benchmark(args):
         labels = examples["label"]
         return {"images": images, "labels": labels}
 
-    train_dataset = data["train"].with_transform(lambda x: preprocess_function(x, transform_train))
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=lambda x: x, drop_last=True)
-
     models_to_test = SUPPORTED_MODELS if args.test_all else [args.model]
     for model_name in models_to_test:
         print("Testing model: %s" % model_name)
         model = get_model(model_name)
+
+        transform_train = get_transformation(model_name)
+        train_dataset = data["train"].with_transform(lambda x: preprocess_function(x, transform_train))
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=lambda x: x, drop_last=True)
 
         start_time = time.time()
         model = model.to(device)
         elapsed_time = time.time() - start_time
         print("Model loaded to device in %.2f seconds." % elapsed_time)
         with open("data/model_load_times.csv", "a") as f:
-            f.write(f"{gpu_name},{args.model},cifar10,{elapsed_time:.4f}\n")
+            f.write(f"{gpu_name},{model_name},cifar10,{elapsed_time:.4f}\n")
 
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
 
         # First, we perform a single epoch to warm up the GPU and caches
         print("Running warm-up epoch")
-        _ = train(model, train_loader, criterion, optimizer, log=False)
+        _ = train(model, model_name, train_loader, criterion, optimizer, log=False)
 
         # Main training loop
         for epoch in range(args.num_epochs):
-            train_loss, train_accuracy = train(model, train_loader, criterion, optimizer)
+            train_loss, train_accuracy = train(model, model_name, train_loader, criterion, optimizer)
 
             print(f"Epoch {epoch+1}/{args.num_epochs}")
             print(f"Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy:.2f}%")
