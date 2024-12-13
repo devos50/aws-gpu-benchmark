@@ -35,7 +35,7 @@ p <- ggplot(summary_long_data, aes(x = model, y = avg_time, fill = component)) +
   geom_bar(stat = "identity") +
   labs(x = "Model", y = "Average Time [s]", fill = "Stage") +
   theme_bw() +
-  scale_fill_discrete(name = "Component", labels = c("Backward Pass", "Forward Pass", "Data Loading")) +
+  scale_fill_discrete(name = "Stage", labels = c("Backward Pass", "Forward Pass", "Data Loading")) +
   theme(legend.position = c(0.2, 0.6), axis.text.x = element_text(angle = 45, hjust = 1), legend.background = element_rect(color = "black", fill = "white"))
 
 # Save the plot to a PDF file
