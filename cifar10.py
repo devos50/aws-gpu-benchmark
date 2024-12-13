@@ -42,14 +42,14 @@ def train(model, dataloader, criterion, optimizer, log=True):
         elapsed_time = time.time() - start_time
         if log:
             with open("data/local_steps_time.csv", "a") as f:
-                f.write(f"{args.model},cifar10,{elapsed_time:.3f}\n")
+                f.write(f"{args.model},cifar10,{elapsed_time:.4f}\n")
 
         # Clear GPU memory
         del images, labels, outputs
         torch.cuda.empty_cache()
 
     elapsed_epoch_time = time.time() - epoch_start_time
-    print("Running one epoch (%d steps) took %.2f seconds." % (steps, epoch_start_time))
+    print("Running one epoch (%d steps) took %.2f seconds." % (steps, elapsed_epoch_time))
 
     accuracy = 100. * correct / total
     return running_loss / len(dataloader), accuracy
@@ -97,12 +97,13 @@ def benchmark(args):
     elapsed_time = time.time() - start_time
     print("Model loaded to device in %.2f seconds." % elapsed_time)
     with open("data/model_load_times.csv", "a") as f:
-        f.write(f"{args.model},cifar10,{elapsed_time:.3f}\n")
+        f.write(f"{args.model},cifar10,{elapsed_time:.4f}\n")
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
 
     # First, we perform a single epoch to warm up the GPU and caches
+    print("Running warm-up epoch")
     _ = train(model, train_loader, criterion, optimizer, log=False)
 
     # Main training loop
