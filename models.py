@@ -14,6 +14,9 @@ def get_model(model_name):
     elif model_name == "resnet152":
         from torchvision.models import resnet152
         return resnet152(num_classes=10)
+    elif model_name == "mobilenet_v3_large":
+        from torchvision.models import mobilenet_v3_large
+        return mobilenet_v3_large(num_classes=10)
     elif model_name == "efficientnet-b7":
         # Load using HF
         from transformers import AutoModelForImageClassification
