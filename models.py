@@ -1,5 +1,11 @@
 def get_model(model_name, dataset_name):
-    num_classes = 10 if dataset_name == "cifar10" else 100
+    # Determine num_classes based on dataset
+    if dataset_name == "cifar10":
+        num_classes = 10
+    elif dataset_name == "cifar100":
+        num_classes = 100
+    elif dataset_name == "tiny-imagenet":
+        num_classes = 200
 
     if model_name == "resnet18":
         from torchvision.models import resnet18

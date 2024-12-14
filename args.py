@@ -1,7 +1,7 @@
 import argparse
 
 SUPPORTED_MODELS = ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152", "efficientnet-b7", "mobilenet_v3_large", "vit-base-patch16-224", "vit-large-patch16-224"]
-SUPPORTED_DATASETS = ["cifar10", "cifar100"]
+SUPPORTED_DATASETS = ["cifar10", "cifar100", "tiny-imagenet"]
 
 def get_args():
     parser = argparse.ArgumentParser(description='AWS GPU Benchmarking Arguments')

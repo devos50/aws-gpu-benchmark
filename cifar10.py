@@ -96,10 +96,16 @@ def init_data_dir():
 def benchmark(args):
     init_data_dir()
 
-    # Load CIFAR-10 dataset using Hugging Face
-    data = load_dataset(args.dataset)
+    # Load the dataset using Hugging Face
+    prefix = ""
+    if args.dataset == "tiny-imagenet":
+        prefix = "zh-plus/"
+
+    data = load_dataset(f"{prefix}{args.dataset}")
     if args.dataset == "cifar100":
         data = data.map(lambda example: {"label": example["fine_label"]}, remove_columns=["fine_label"])
+    elif args.dataset == "tiny-imagenet":
+        data = data.map(lambda example: {"img": example["image"]}, remove_columns=["image"])
 
     # Prepare datasets and dataloaders
     def preprocess_function(examples, transform):
@@ -113,8 +119,6 @@ def benchmark(args):
         model = get_model(model_name, args.dataset)
 
         transform_train = get_transformation(model_name)
-
-        print(data["train"])
 
         train_dataset = data["train"].with_transform(lambda x: preprocess_function(x, transform_train))
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=lambda x: x, drop_last=True)
