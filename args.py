@@ -1,6 +1,6 @@
 import argparse
 
-SUPPORTED_MODELS = ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152", "vit-base-patch16-224", "vit-large-patch16-224"]
+SUPPORTED_MODELS = ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152", "efficientnet-b7", "vit-base-patch16-224", "vit-large-patch16-224"]
 
 def get_args():
     parser = argparse.ArgumentParser(description='AWS GPU Benchmarking Arguments')

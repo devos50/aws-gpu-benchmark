@@ -14,6 +14,10 @@ def get_model(model_name):
     elif model_name == "resnet152":
         from torchvision.models import resnet152
         return resnet152(num_classes=10)
+    elif model_name == "efficientnet-b7":
+        # Load using HF
+        from transformers import AutoModelForImageClassification
+        return AutoModelForImageClassification.from_pretrained('google/efficientnet-b7')
     elif "vit" in model_name:
         from transformers import ViTForImageClassification
         return ViTForImageClassification.from_pretrained('google/%s' % model_name)
