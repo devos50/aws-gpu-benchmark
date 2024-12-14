@@ -39,7 +39,7 @@ def train(model, model_name: str, dataloader, criterion, optimizer, log=True, ma
         start_time_forward = time.time()
         optimizer.zero_grad()
         outputs = model(images)
-        if "vit" in model_name:
+        if "vit" in model_name or "efficientnet" in model_name:
             outputs = outputs.logits
         loss = criterion(outputs, labels)
         if cuda_available:
