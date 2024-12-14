@@ -1,22 +1,24 @@
-def get_model(model_name):
+def get_model(model_name, dataset_name):
+    num_classes = 10 if dataset_name == "cifar10" else 100
+
     if model_name == "resnet18":
         from torchvision.models import resnet18
-        return resnet18(num_classes=10)
+        return resnet18(num_classes=num_classes)
     elif model_name == "resnet34":
         from torchvision.models import resnet34
-        return resnet34(num_classes=10)
+        return resnet34(num_classes=num_classes)
     elif model_name == "resnet50":
         from torchvision.models import resnet50
-        return resnet50(num_classes=10)
+        return resnet50(num_classes=num_classes)
     elif model_name == "resnet101":
         from torchvision.models import resnet101
-        return resnet101(num_classes=10)
+        return resnet101(num_classes=num_classes)
     elif model_name == "resnet152":
         from torchvision.models import resnet152
-        return resnet152(num_classes=10)
+        return resnet152(num_classes=num_classes)
     elif model_name == "mobilenet_v3_large":
         from torchvision.models import mobilenet_v3_large
-        return mobilenet_v3_large(num_classes=10)
+        return mobilenet_v3_large(num_classes=num_classes)
     elif model_name == "efficientnet-b7":
         # Load using HF
         from transformers import AutoModelForImageClassification

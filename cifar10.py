@@ -76,7 +76,7 @@ def train(model, model_name: str, dataloader, criterion, optimizer, log=True, ma
         with open("data/local_steps_time.csv", "a") as f:
             for elapsed_time_data_load, elapsed_time_forward, elapsed_time_backward in elapsed_times:
                 total_time = elapsed_time_data_load + elapsed_time_forward + elapsed_time_backward
-                f.write(f"{gpu_name},{model_name},cifar10,{args.batch_size},{elapsed_time_data_load:.4f},{elapsed_time_forward:.4f},{elapsed_time_backward:.4f},{total_time:.4f}\n")
+                f.write(f"{gpu_name},{model_name},{args.dataset},{args.batch_size},{elapsed_time_data_load:.4f},{elapsed_time_forward:.4f},{elapsed_time_backward:.4f},{total_time:.4f}\n")
 
     accuracy = 100. * correct / total
     return running_loss / len(dataloader), accuracy
@@ -97,7 +97,9 @@ def benchmark(args):
     init_data_dir()
 
     # Load CIFAR-10 dataset using Hugging Face
-    data = load_dataset("cifar10")
+    data = load_dataset(args.dataset)
+    if args.dataset == "cifar100":
+        data = data.map(lambda example: {"label": example["fine_label"]}, remove_columns=["fine_label"])
 
     # Prepare datasets and dataloaders
     def preprocess_function(examples, transform):
@@ -107,10 +109,13 @@ def benchmark(args):
 
     models_to_test = SUPPORTED_MODELS if args.test_all else [args.model]
     for model_name in models_to_test:
-        print("Testing model: %s" % model_name)
-        model = get_model(model_name)
+        print("Testing model: %s, with dataset: %s" % (model_name, args.dataset))
+        model = get_model(model_name, args.dataset)
 
         transform_train = get_transformation(model_name)
+
+        print(data["train"])
+
         train_dataset = data["train"].with_transform(lambda x: preprocess_function(x, transform_train))
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=lambda x: x, drop_last=True)
 
@@ -121,7 +126,7 @@ def benchmark(args):
         elapsed_time = time.time() - start_time
         print("Model loaded to device in %.2f seconds." % elapsed_time)
         with open("data/model_load_times.csv", "a") as f:
-            f.write(f"{gpu_name},{model_name},cifar10,{elapsed_time:.4f}\n")
+            f.write(f"{gpu_name},{model_name},{args.dataset},{elapsed_time:.4f}\n")
 
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
