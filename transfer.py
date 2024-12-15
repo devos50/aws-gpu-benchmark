@@ -40,6 +40,23 @@ def init_data_dir():
             f.write("from_instance,from_az,to_instance,to_az,model_size,time\n")
 
 
+def send_model(socket, model_bytes, model_size_mb):
+    start_time = time.time()
+
+    # Send data
+    socket.send(model_bytes)
+
+    # Wait for acknowledgment
+    socket.recv()
+
+    end_time = time.time()
+    print(f"Model sent. Time taken: {end_time - start_time:.2f} seconds")
+
+    # Log transfer time
+    with open("data/transfer_times.csv", "a") as f:
+        f.write(f"{args.from_instance},{args.from_az},{args.to_instance},{args.to_az},{model_size_mb:.2f},{end_time - start_time:.4f}\n")
+
+
 def client(server_ip):
     init_data_dir()
 
@@ -63,25 +80,15 @@ def client(server_ip):
     socket.connect(f"tcp://{server_ip}:{SERVER_PORT}")
     print(f"Connected to server at {server_ip}:{SERVER_PORT}")
 
-    start_time = time.time()
-
-    # Send data
-    socket.send(model_bytes)
-
-    # Wait for acknowledgment
-    socket.recv()
-
-    end_time = time.time()
-    print(f"Model sent. Time taken: {end_time - start_time:.2f} seconds")
-
-    # Log transfer time
-    with open("data/transfer_times.csv", "a") as f:
-        f.write(f"{args.from_instance},{args.from_az},{args.to_instance},{args.to_az},{model_size_mb:.2f},{end_time - start_time:.4f}\n")
+    for i in range(args.tries):
+        print(f"Sending model {i + 1}/{args.tries}...")
+        send_model(socket, model_bytes, model_size_mb)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Model Transfer Benchmark with ZeroMQ")
     parser.add_argument("mode", choices=["server", "client"], help="Mode to run: server or client")
     parser.add_argument("--ip", type=str, help="IP address of the server (required for client mode)")
+    parser.add_argument("--tries", type=int, default=5, help="Number of times to send the model (default: 5)")
 
     parser.add_argument("--from-instance", type=str, help="Instance type of the sender (required for logging)")
     parser.add_argument("--to-instance", type=str, help="Instance type of the receiver (required for logging)")
