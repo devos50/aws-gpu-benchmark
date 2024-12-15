@@ -40,7 +40,7 @@ def init_data_dir():
             f.write("from_instance,from_az,to_instance,to_az,model_size,time\n")
 
 
-def send_model(socket, model_bytes, model_size_mb):
+def send_model(socket, model_bytes, model_size):
     start_time = time.time()
 
     # Send data
@@ -54,7 +54,7 @@ def send_model(socket, model_bytes, model_size_mb):
 
     # Log transfer time
     with open("data/transfer_times.csv", "a") as f:
-        f.write(f"{args.from_instance},{args.from_az},{args.to_instance},{args.to_az},{model_size_mb:.2f},{end_time - start_time:.4f}\n")
+        f.write(f"{args.from_instance},{args.from_az},{args.to_instance},{args.to_az},{model_size},{end_time - start_time:.4f}\n")
 
 
 def client(server_ip):
@@ -82,7 +82,7 @@ def client(server_ip):
 
     for i in range(args.tries):
         print(f"Sending model {i + 1}/{args.tries}...")
-        send_model(socket, model_bytes, model_size_mb)
+        send_model(socket, model_bytes, len(model_bytes))
         time.sleep(2)
 
 if __name__ == "__main__":
