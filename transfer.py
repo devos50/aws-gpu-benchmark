@@ -83,12 +83,13 @@ def client(server_ip):
     for i in range(args.tries):
         print(f"Sending model {i + 1}/{args.tries}...")
         send_model(socket, model_bytes, model_size_mb)
+        time.sleep(2)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Model Transfer Benchmark with ZeroMQ")
     parser.add_argument("mode", choices=["server", "client"], help="Mode to run: server or client")
     parser.add_argument("--ip", type=str, help="IP address of the server (required for client mode)")
-    parser.add_argument("--tries", type=int, default=5, help="Number of times to send the model (default: 5)")
+    parser.add_argument("--tries", type=int, default=10, help="Number of times to send the model (default: 5)")
 
     parser.add_argument("--from-instance", type=str, help="Instance type of the sender (required for logging)")
     parser.add_argument("--to-instance", type=str, help="Instance type of the receiver (required for logging)")
