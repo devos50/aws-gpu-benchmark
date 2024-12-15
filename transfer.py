@@ -66,7 +66,7 @@ def client(server_ip):
 
     # Serialize the model
     print("Serializing model...")
-    model_data = torch.save(model.state_dict(), "model.pt", _use_new_zipfile_serialization=False)
+    model_data = torch.save(model.state_dict(), "model.pt")
 
     with open("model.pt", "rb") as f:
         model_bytes = f.read()
