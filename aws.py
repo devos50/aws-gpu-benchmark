@@ -6,6 +6,18 @@ import boto3
 import paramiko
 
 
+templates = {
+    "p3": {
+        "LaunchTemplateName": "p3_instance",
+        "InstanceType": "p3.2xlarge",
+    },
+    "g5": {
+        "LaunchTemplateName": "g5_instance",
+        "InstanceType": "g5.2xlarge",
+    }
+}
+
+
 def execute_ssh_command(instance_ip, key_file, username, command):
     """
     Connects to an EC2 instance via SSH and executes a command.
@@ -39,7 +51,7 @@ def execute_ssh_command(instance_ip, key_file, username, command):
 
 
 def list_all_ec2_instances():
-    regions = ["us-east-1", "eu-central-1", "ap-northeast-1"]
+    regions = ["us-east-1", "us-west-2", "ap-northeast-1", "eu-central-1", "sa-east-1"]
     
     all_instances = []
 
@@ -79,16 +91,17 @@ def list_all_ec2_instances():
     return all_instances
 
 
-def spawn_spot_instance(region_name):
+def spawn_spot_instance(region_name, template_name):
+    template = templates[template_name]
     ec2 = boto3.client('ec2', region_name=region_name)
     
     # Configuration for Spot Instance
     spot_instance_config = {
         'LaunchTemplate': {
-            'LaunchTemplateName': 'p3_instance',
+            'LaunchTemplateName': template['LaunchTemplateName'],
             'Version': '$Latest'  # Specify the version or '$Latest'
         },
-        'InstanceType': 'p3.2xlarge',  # Replace with the desired instance type
+        'InstanceType': template['InstanceType'],
         'InstanceMarketOptions': {
             'MarketType': 'spot',
             'SpotOptions': {
@@ -97,8 +110,8 @@ def spawn_spot_instance(region_name):
                 'InstanceInterruptionBehavior': 'terminate',
             }
         },
-        'MinCount': 1,  # Minimum number of instances
-        'MaxCount': 1,  # Maximum number of instances
+        'MinCount': 1,
+        'MaxCount': 1,
     }
     
     # Launch Spot Instances
@@ -154,13 +167,19 @@ if __name__ == "__main__":
         default="xxxxx",
         help="The instance IP."
     )
+    parser.add_argument(
+        "--template",
+        choices=["p3", "g5"],
+        default="p3",
+        help="The instance template."
+    )
 
     args = parser.parse_args()
 
     if args.action == "list":
         list_all_ec2_instances()
     elif args.action == "spawn-instance":
-        spawn_spot_instance(args.region)
+        spawn_spot_instance(args.region, args.template)
     elif args.action == "cmd":
         execute_ssh_command(args.ip, '/Users/mdevos/.ssh/Amazon.pem', 'ubuntu', 'nvidia-smi')
     elif args.action == "terminate":
