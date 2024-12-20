@@ -24,7 +24,6 @@ MODELS_TO_TEST = ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152",
                   "t5-small", "t5-base", "t5-large",
                   ]
 
-MODEL_PATH = os.path.join("data", "model.pt")
 TIME_FILE_PATH = os.path.join("data", "serialization_times.csv")
 
 
@@ -36,13 +35,15 @@ def init_data_dir():
         f.write("model,model_size,serialization_time,deserialization_time,to_gpu_time,from_gpu_time\n")
 
 
-def benchmark_serialization_speed(model_name):
+def benchmark_serialization_speed(model_name, storage_backend):
     print(f"Testing serialization speed for model {model_name}...")
+
+    MODEL_PATH = os.path.join("data", "model.pt") if storage_backend == "ebs" else "/opt/dlami/nvme/model.pt"
 
     if os.path.exists(MODEL_PATH):
         os.remove(MODEL_PATH)
 
-    for run in range(1):
+    for run in range(6):
         model = get_model(model_name, "cifar10")
 
         # Serialize the model
@@ -72,7 +73,8 @@ def benchmark_serialization_speed(model_name):
             torch.cuda.synchronize()
             from_gpu_time = time.time() - start_time
         else:
-            gpu_load_time = -1
+            to_gpu_time = -1
+            from_gpu_time = -1
 
         del model
         if torch.cuda.is_available():
@@ -89,5 +91,6 @@ def benchmark_serialization_speed(model_name):
 if __name__ == "__main__":
     init_data_dir()
     print("Will test %d models." % len(MODELS_TO_TEST))
-    for model_name in MODELS_TO_TEST:
-        benchmark_serialization_speed(model_name)
+    for storage_backend in ["ebs", "nvme"]:
+        for model_name in MODELS_TO_TEST:
+            benchmark_serialization_speed(model_name, storage_backend)
