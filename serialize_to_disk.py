@@ -14,7 +14,7 @@ import torch
 #                   "bert-base-uncased",
 #                   "dense121", "dense169", "dense201", "dense161"]
 
-MODELS_TO_TEST = ["gpt2"]
+MODELS_TO_TEST = ["bert-base-uncased", "gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl"]
 
 MODEL_PATH = os.path.join("data", "model.pt")
 TIME_FILE_PATH = os.path.join("data", "serialization_times.csv")
@@ -24,16 +24,15 @@ def init_data_dir():
     if not os.path.exists("data"):
         os.makedirs("data")
 
-    if not os.path.exists(TIME_FILE_PATH):
-        with open(TIME_FILE_PATH, "w") as f:
-            f.write("model,model_size,serialization_time,deserialization_time\n")
+    with open(TIME_FILE_PATH, "w") as f:
+        f.write("model,model_size,serialization_time,deserialization_time,to_gpu_time\n")
 
 
 def benchmark_serialization_speed(model_name):
     print(f"Testing serialization speed for model {model_name}...")
 
     if os.path.exists(MODEL_PATH):
-        os.remove(MODEL_PATH)    
+        os.remove(MODEL_PATH)
 
     for _ in range(10):
         model = get_model(model_name, "cifar10")
@@ -53,11 +52,23 @@ def benchmark_serialization_speed(model_name):
         deserialize_time = time.time() - start_time
         print(f"Model deserialized. Time taken: {deserialize_time:.2f} seconds")
 
-        # Log serialization and deserialization times
-        with open(TIME_FILE_PATH, "a") as f:
-            f.write(f"{model_name},{serialized_size},{serialize_time:.4f},{deserialize_time:.4f}\n")
+        # Load the model to GPU
+        if torch.cuda.is_available():
+            start_time = time.time()
+            model = model.to("cuda")
+            torch.cuda.synchronize()
+            gpu_load_time = time.time() - start_time
+        else:
+            gpu_load_time = -1
 
         del model
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        # Log serialization and deserialization times
+        with open(TIME_FILE_PATH, "a") as f:
+            f.write(f"{model_name},{serialized_size},{serialize_time:.4f},{deserialize_time:.4f},{gpu_load_time:.4f}\n")
+
         time.sleep(1)
 
 
