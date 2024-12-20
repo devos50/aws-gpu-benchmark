@@ -26,9 +26,11 @@ def get_model(model_name, dataset_name):
         from torchvision.models import mobilenet_v3_large
         return mobilenet_v3_large(num_classes=num_classes)
     elif model_name == "efficientnet-b7":
-        # Load using HF
         from transformers import AutoModelForImageClassification
         return AutoModelForImageClassification.from_pretrained('google/efficientnet-b7')
+    elif model_name == "bert-base-uncased":
+        from transformers import BertForSequenceClassification
+        return BertForSequenceClassification.from_pretrained('bert-base-uncased')
     elif "vit" in model_name:
         from transformers import ViTForImageClassification
         return ViTForImageClassification.from_pretrained('google/%s' % model_name)

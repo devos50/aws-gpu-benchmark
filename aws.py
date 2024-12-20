@@ -1,5 +1,6 @@
 import argparse
 import sys
+import time
 
 import boto3
 
@@ -18,7 +19,7 @@ templates = {
 }
 
 
-def execute_ssh_command(instance_ip, key_file, username, command):
+def execute_ssh_command(instance_ip, key_file, username, command, blocking=True):
     """
     Connects to an EC2 instance via SSH and executes a command.
     """
@@ -37,12 +38,13 @@ def execute_ssh_command(instance_ip, key_file, username, command):
         stdin, stdout, stderr = ssh_client.exec_command(command)
         
         # Get the output and error
-        output = stdout.read().decode()
-        error = stderr.read().decode()
-        
-        print(f"Command Output:\n{output}")
-        if error:
-            print(f"Command Error:\n{error}")
+        if blocking:
+            output = stdout.read().decode()
+            error = stderr.read().decode()
+            
+            print(f"Command Output:\n{output}")
+            if error:
+                print(f"Command Error:\n{error}")
         
     except Exception as e:
         print(f"Failed to execute command on {instance_ip}: {e}")
@@ -50,9 +52,9 @@ def execute_ssh_command(instance_ip, key_file, username, command):
         ssh_client.close()
 
 
-def list_all_ec2_instances():
+def get_all_ec2_instances():
     regions = ["us-east-1", "us-west-2", "ap-northeast-1", "eu-central-1", "sa-east-1"]
-    
+
     all_instances = []
 
     for region in regions:
@@ -71,22 +73,16 @@ def list_all_ec2_instances():
                         'InstanceId': instance['InstanceId'],
                         'State': instance['State']['Name'],
                         'Region': region,
+                        'AvailabilityZone': instance['Placement']['AvailabilityZone'],
                         'InstanceType': instance['InstanceType'],
                         'LaunchTime': instance['LaunchTime'].strftime('%Y-%m-%d %H:%M:%S'),
                         'PublicIP': instance.get('PublicIpAddress', 'N/A'),
                         'PrivateIP': instance.get('PrivateIpAddress', 'N/A'),
+                        'Lifecycle': instance.get('InstanceLifecycle', 'On-Demand')
                     }
                     all_instances.append(instance_info)
         except Exception as e:
             print(f"Error fetching instances in region {region}: {e}")
-
-    # Display the instances
-    if all_instances:
-        print(f"\nFound {len(all_instances)} instances:")
-        for instance in all_instances:
-            print(instance)
-    else:
-        print("No instances found.")
     
     return all_instances
 
@@ -135,7 +131,7 @@ def terminate_instance(instance_id, region="us-east-1"):
         str: The current state of the instance after termination.
     """
     ec2 = boto3.client('ec2', region_name=region)
-    
+
     try:
         response = ec2.terminate_instances(InstanceIds=[instance_id])
         current_state = response['TerminatingInstances'][0]['CurrentState']['Name']
@@ -144,12 +140,40 @@ def terminate_instance(instance_id, region="us-east-1"):
     except Exception as e:
         print(f"Error terminating instance {instance_id}: {e}")
         return None
+    
+def conduct_model_transfer_speed_experiment():
+    instances = get_all_ec2_instances()
+
+    # Kill the transfer.py process on all instances
+    for instance in instances:
+        cmd = "pkill -f transfer.py"
+        execute_ssh_command(instance["PublicIP"], '/Users/martijndevos/.ssh/Amazon.pem', 'ubuntu', cmd)
+
+    time.sleep(5)
+    print("Starting the transfer server again")
+    for instance in instances:
+        cmd = "source activate pytorch && cd /home/ubuntu/aws-gpu-benchmark && nohup python3 transfer.py server > server.log 2>&1 &"
+        execute_ssh_command(instance["PublicIP"], '/Users/martijndevos/.ssh/Amazon.pem', 'ubuntu', cmd, blocking=False)
+
+    time.sleep(5)
+
+    print("Starting transfers...")
+    for from_instance in instances:
+        for to_instance in instances:
+            if from_instance["InstanceId"] == to_instance["InstanceId"]:
+                continue
+
+            print("Conducting experiment {} => {}".format(from_instance["Region"], to_instance["Region"]))
+            cmd = "source activate pytorch && cd /home/ubuntu/aws-gpu-benchmark && python3 transfer.py client --ip {} --from-instance {} --to-instance {} --from-az {} --to-az {}".format(to_instance["PublicIP"], from_instance["InstanceType"], to_instance["InstanceType"], from_instance["AvailabilityZone"], to_instance["AvailabilityZone"])
+            print("Running command: {}".format(cmd))
+            execute_ssh_command(from_instance["PublicIP"], '/Users/martijndevos/.ssh/Amazon.pem', 'ubuntu', cmd)
+            time.sleep(5)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Manage AWS EC2 Spot Instances")
     parser.add_argument(
         "action",
-        choices=["list", "spawn-instance", "cmd", "terminate"],
+        choices=["list", "spawn-instance", "test_model_transfer_speed", "terminate"],
         help="Action to perform."
     )
     parser.add_argument(
@@ -177,11 +201,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.action == "list":
-        list_all_ec2_instances()
+        all_instances = get_all_ec2_instances()
+        if all_instances:
+            print(f"\nFound {len(all_instances)} instances:")
+            for instance in all_instances:
+                print(instance)
+        else:
+            print("No instances found.")
     elif args.action == "spawn-instance":
         spawn_spot_instance(args.region, args.template)
-    elif args.action == "cmd":
-        execute_ssh_command(args.ip, '/Users/mdevos/.ssh/Amazon.pem', 'ubuntu', 'nvidia-smi')
+    elif args.action == "test_model_transfer_speed":
+        conduct_model_transfer_speed_experiment()
     elif args.action == "terminate":
         terminate_instance(args.instance_id, region=args.region)
     else:
