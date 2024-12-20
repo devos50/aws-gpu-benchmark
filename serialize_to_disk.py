@@ -1,4 +1,5 @@
 # Script to benchmark the time it takes to serialize a model to disk and load it from the disk
+import argparse
 import os
 import time
 
@@ -32,11 +33,11 @@ def init_data_dir():
         os.makedirs("data")
 
     with open(TIME_FILE_PATH, "w") as f:
-        f.write("model,model_size,serialization_time,deserialization_time,to_gpu_time,from_gpu_time\n")
+        f.write("instance,model,model_size,storage,serialization_time,deserialization_time,to_gpu_time,from_gpu_time\n")
 
 
-def benchmark_serialization_speed(model_name, storage_backend):
-    print(f"Testing serialization speed for model {model_name}...")
+def benchmark_serialization_speed(model_name, storage_backend, instance):
+    print(f"Testing serialization speed for model {model_name} (backend: {storage_backend})...")
 
     MODEL_PATH = os.path.join("data", "model.pt") if storage_backend == "ebs" else "/opt/dlami/nvme/model.pt"
 
@@ -83,14 +84,19 @@ def benchmark_serialization_speed(model_name, storage_backend):
         # Log serialization and deserialization times
         if run > 0:
             with open(TIME_FILE_PATH, "a") as f:
-                f.write(f"{model_name},{serialized_size},{serialize_time:.4f},{deserialize_time:.4f},{to_gpu_time:.4f},{from_gpu_time:.4f}\n")
+                f.write(f"{instance},{model_name},{serialized_size},{storage_backend},{serialize_time:.4f},{deserialize_time:.4f},{to_gpu_time:.4f},{from_gpu_time:.4f}\n")
 
         time.sleep(1)
 
 
 if __name__ == "__main__":
     init_data_dir()
+
+    parser = argparse.ArgumentParser(description="Serialization Speed Benchmark")
+    parser.add_argument("instance", default="g5.2xlarge", help="The AWS instance type to use for the benchmark.")
+    args = parser.parse_args()
+
     print("Will test %d models." % len(MODELS_TO_TEST))
     for storage_backend in ["ebs", "nvme"]:
         for model_name in MODELS_TO_TEST:
-            benchmark_serialization_speed(model_name, storage_backend)
+            benchmark_serialization_speed(model_name, storage_backend, args.instance)
