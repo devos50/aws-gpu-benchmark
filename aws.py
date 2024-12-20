@@ -12,6 +12,10 @@ templates = {
         "LaunchTemplateName": "p3_instance",
         "InstanceType": "p3.2xlarge",
     },
+    "g4dn": {
+        "LaunchTemplateName": "g5_instance",
+        "InstanceType": "g4dn.2xlarge",
+    },
     "g5": {
         "LaunchTemplateName": "g5_instance",
         "InstanceType": "g5.2xlarge",
