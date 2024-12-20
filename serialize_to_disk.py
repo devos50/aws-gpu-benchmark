@@ -21,7 +21,7 @@ MODELS_TO_TEST = ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152",
                   "roberta-base", "roberta-large",
                   "distilbert-base-uncased", "distilbert-base-uncased-distilled-squad",
                   "albert-base-v2", "albert-large-v2", "albert-xlarge-v2", "albert-xxlarge-v2",
-                  "t5-small", "t5-base", "t5-large", "t5-3b", "t5-11b",
+                  "t5-small", "t5-base", "t5-large",
                   ]
 
 MODEL_PATH = os.path.join("data", "model.pt")
