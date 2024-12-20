@@ -20,8 +20,6 @@ MODELS_TO_TEST = ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152",
                   "t5-small", "t5-base", "t5-large", "t5-3b", "t5-11b",
                   ]
 
-MODELS_TO_TEST = ["albert-base-v2", "albert-large-v2", "albert-xlarge-v2", "albert-xxlarge-v2"]
-
 MODEL_PATH = os.path.join("data", "model.pt")
 TIME_FILE_PATH = os.path.join("data", "serialization_times.csv")
 
@@ -31,7 +29,7 @@ def init_data_dir():
         os.makedirs("data")
 
     with open(TIME_FILE_PATH, "w") as f:
-        f.write("model,model_size,serialization_time,deserialization_time,to_gpu_time\n")
+        f.write("model,model_size,serialization_time,deserialization_time,to_gpu_time,from_gpu_time\n")
 
 
 def benchmark_serialization_speed(model_name):
@@ -63,7 +61,12 @@ def benchmark_serialization_speed(model_name):
             start_time = time.time()
             model = model.to("cuda")
             torch.cuda.synchronize()
-            gpu_load_time = time.time() - start_time
+            to_gpu_time = time.time() - start_time
+
+            start_time = time
+            model = model.to("cpu")
+            torch.cuda.synchronize()
+            from_gpu_time += time.time() - start_time
         else:
             gpu_load_time = -1
 
@@ -74,7 +77,7 @@ def benchmark_serialization_speed(model_name):
         # Log serialization and deserialization times
         if run > 0:
             with open(TIME_FILE_PATH, "a") as f:
-                f.write(f"{model_name},{serialized_size},{serialize_time:.4f},{deserialize_time:.4f},{gpu_load_time:.4f}\n")
+                f.write(f"{model_name},{serialized_size},{serialize_time:.4f},{deserialize_time:.4f},{to_gpu_time:.4f},{from_gpu_time:.4f}\n")
 
         time.sleep(1)
 
