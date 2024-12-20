@@ -13,9 +13,12 @@ from transformations import get_transformation
 
 
 MODELS_TO_TEST = ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152",
-                  "efficientnet-b7",
+                  "efficientnet-b0", "efficientnet-b1", "efficientnet-b2", "efficientnet-b3", "efficientnet-b4", "efficientnet-b5", "efficientnet-b6", "efficientnet-b7",
+                  "convnext-tiny", "convnext-small", "convnext-base", "convnext-large",
                   "mobilenet_v3_large",
-                  "vit-base-patch16-224", "vit-large-patch16-224"]
+                  "vit-base-patch16-224", "vit-large-patch16-224",
+                  "densenet121", "densenet169", "densenet201", "densenet161",
+                  ]
 
 
 cuda_available = torch.cuda.is_available()
@@ -91,17 +94,13 @@ def init_data_dir():
     if not os.path.exists("data"):
         os.makedirs("data")
 
-    if not os.path.exists("data/model_load_times.csv"):
-        with open("data/model_load_times.csv", "w") as f:
-            f.write("gpu,model,dataset,load_time\n")
+    with open("data/model_load_times.csv", "w") as f:
+        f.write("gpu,model,dataset,load_time\n")
 
-    if not os.path.exists("data/local_steps_time.csv"):
-        with open("data/local_steps_time.csv", "w") as f:
-            f.write("gpu,model,dataset,batch_size,time_data,time_forward,time_backward,time_total\n")
+    with open("data/local_steps_time.csv", "w") as f:
+        f.write("gpu,model,dataset,batch_size,time_data,time_forward,time_backward,time_total\n")
 
 def benchmark(args):
-    init_data_dir()
-
     # Load the dataset using Hugging Face
     prefix = ""
     if args.dataset == "tiny-imagenet":
@@ -156,5 +155,6 @@ def benchmark(args):
     print("Benchmark completed.")
 
 if __name__ == "__main__":
+    init_data_dir()
     args = get_args()
     benchmark(args)
