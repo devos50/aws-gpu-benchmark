@@ -74,3 +74,6 @@ def get_model(model_name, dataset_name):
     elif model_name in ["t5-small", "t5-base", "t5-large", "t5-3b", "t5-11b"]:
         from transformers import T5ForConditionalGeneration
         return T5ForConditionalGeneration.from_pretrained(model_name)
+    
+    else:
+        raise RuntimeError(f"Model {model_name} not supported")
