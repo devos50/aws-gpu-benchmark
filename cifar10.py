@@ -144,7 +144,7 @@ def benchmark(args):
         print("Running warm-up steps")
         try:
             _ = train(model, model_name, train_loader, criterion, optimizer, log=False, max_steps=10)
-        except torch.OutofMemoryError:
+        except RuntimeError:
             print("Out of memory error during warm-up. Skipping model.")
             continue
         print("Warm-up steps completed")
