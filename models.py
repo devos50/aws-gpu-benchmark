@@ -29,7 +29,7 @@ def get_model(model_name, dataset_name):
     elif model_name == "efficientnet-b7":
         from transformers import AutoModelForImageClassification
         return AutoModelForImageClassification.from_pretrained('google/efficientnet-b7')
-    elif "vit" in model_name:
+    elif model_name in ["vit-base-patch16-224", "vit-large-patch16-224"]:
         from transformers import ViTForImageClassification
         return ViTForImageClassification.from_pretrained('google/%s' % model_name)
     elif model_name == "densenet121":
