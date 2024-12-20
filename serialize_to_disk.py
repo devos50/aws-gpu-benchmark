@@ -13,6 +13,7 @@ MODELS_TO_TEST = ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152",
                   "vit-base-patch16-224", "vit-large-patch16-224",
                   "densenet121", "densenet169", "densenet201", "densenet161",
                   "clip-vit-base-patch32", "clip-vit-large-patch14",
+                  "yolo11n", "yolo11s", "yolo11m", "yolo11l", "yolo11x",
                   "whisper-small",
                   "bert-base-uncased",
                   "gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl",
@@ -40,7 +41,7 @@ def benchmark_serialization_speed(model_name):
     if os.path.exists(MODEL_PATH):
         os.remove(MODEL_PATH)
 
-    for run in range(11):
+    for run in range(1):
         model = get_model(model_name, "cifar10")
 
         # Serialize the model

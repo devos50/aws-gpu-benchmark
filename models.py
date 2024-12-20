@@ -45,6 +45,11 @@ def get_model(model_name, dataset_name):
         from torchvision.models import densenet161
         return densenet161(num_classes=num_classes)
     
+    # Object detection models
+    elif model_name in ["yolo11n", "yolo11s", "yolo11m", "yolo11l", "yolo11x"]:
+        from ultralytics import YOLO
+        return YOLO("%s.pt" % model_name)
+    
     # Multimodal models
     if model_name in ["clip-vit-base-patch32", "clip-vit-large-patch14"]:
         from transformers import CLIPModel
