@@ -8,7 +8,8 @@ import torch
 
 
 MODELS_TO_TEST = ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152",
-                  "efficientnet-b7",
+                  "efficientnet-b0", "efficientnet-b1", "efficientnet-b2", "efficientnet-b3", "efficientnet-b4", "efficientnet-b5", "efficientnet-b6", "efficientnet-b7",
+                  "convnext-tiny", "convnext-small", "convnext-base", "convnext-large",
                   "mobilenet_v3_large",
                   "vit-base-patch16-224", "vit-large-patch16-224",
                   "densenet121", "densenet169", "densenet201", "densenet161",

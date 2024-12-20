@@ -26,9 +26,21 @@ def get_model(model_name, dataset_name):
     elif model_name == "mobilenet_v3_large":
         from torchvision.models import mobilenet_v3_large
         return mobilenet_v3_large(num_classes=num_classes)
-    elif model_name == "efficientnet-b7":
+    if model_name == "convnext-tiny":
+        from torchvision.models import convnext_tiny
+        return convnext_tiny(num_classes=num_classes)
+    elif model_name == "convnext-small":
+        from torchvision.models import convnext_small
+        return convnext_small(num_classes=num_classes)
+    elif model_name == "convnext-base":
+        from torchvision.models import convnext_base
+        return convnext_base(num_classes=num_classes)
+    elif model_name == "convnext-large":
+        from torchvision.models import convnext_large
+        return convnext_large(num_classes=num_classes)
+    elif "efficientnet" in model_name:
         from transformers import AutoModelForImageClassification
-        return AutoModelForImageClassification.from_pretrained('google/efficientnet-b7')
+        return AutoModelForImageClassification.from_pretrained('google/%s' % model_name)
     elif model_name in ["vit-base-patch16-224", "vit-large-patch16-224"]:
         from transformers import ViTForImageClassification
         return ViTForImageClassification.from_pretrained('google/%s' % model_name)
