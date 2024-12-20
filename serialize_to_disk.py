@@ -11,8 +11,10 @@ MODELS_TO_TEST = ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152",
                   "efficientnet-b7",
                   "mobilenet_v3_large",
                   "vit-base-patch16-224", "vit-large-patch16-224",
-                  "bert-base-uncased",
                   "dense121", "dense169", "dense201", "dense161",
+                  "clip-vit-base-patch32", "clip-vit-large-patch14",
+                  "whisper-small",
+                  "bert-base-uncased",
                   "gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl",
                   "roberta-base", "roberta-large",
                   "distilbert-base-uncased", "distilbert-base-uncased-distilled-squad",
@@ -84,5 +86,6 @@ def benchmark_serialization_speed(model_name):
 
 if __name__ == "__main__":
     init_data_dir()
+    print("Will test %d models." % len(MODELS_TO_TEST))
     for model_name in MODELS_TO_TEST:
         benchmark_serialization_speed(model_name)

@@ -45,6 +45,16 @@ def get_model(model_name, dataset_name):
         from torchvision.models import densenet161
         return densenet161(num_classes=num_classes)
     
+    # Multimodal models
+    if model_name in ["clip-vit-base-patch32", "clip-vit-large-patch14"]:
+        from transformers import CLIPModel
+        return CLIPModel.from_pretrained(f"openai/{model_name}")
+
+    # Audio models
+    elif model_name == "whisper-small":
+        from transformers import WhisperForConditionalGeneration
+        return WhisperForConditionalGeneration.from_pretrained("openai/whisper-small")
+
     # NLP models
     elif model_name == "bert-base-uncased":
         from transformers import BertForSequenceClassification
