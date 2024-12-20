@@ -52,5 +52,6 @@ def benchmark_serialization_speed(model_name):
 
 
 if __name__ == "__main__":
+    init_data_dir()
     for model_name in MODELS_TO_TEST:
         benchmark_serialization_speed(model_name)
