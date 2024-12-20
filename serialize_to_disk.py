@@ -63,7 +63,7 @@ def benchmark_serialization_speed(model_name):
             torch.cuda.synchronize()
             to_gpu_time = time.time() - start_time
 
-            start_time = time
+            start_time = time.time()
             model = model.to("cpu")
             torch.cuda.synchronize()
             from_gpu_time = time.time() - start_time
