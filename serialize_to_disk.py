@@ -31,24 +31,25 @@ def benchmark_serialization_speed(model_name):
     print(f"Loading model {model_name}...")
     model = get_model(model_name, "cifar10")
 
-    # Serialize the model
-    start_time = time.time()
-    model_data = torch.save(model.state_dict(), MODEL_PATH)
-    serialize_time = time.time() - start_time
-    print(f"Model serialized. Time taken: {serialize_time:.2f} seconds")
+    for _ in range(10):
+        # Serialize the model
+        start_time = time.time()
+        model_data = torch.save(model.state_dict(), MODEL_PATH)
+        serialize_time = time.time() - start_time
+        print(f"Model serialized. Time taken: {serialize_time:.2f} seconds")
 
-    serialized_size = os.path.getsize(MODEL_PATH)
+        serialized_size = os.path.getsize(MODEL_PATH)
 
-    # Deserialize the model
-    start_time = time.time()
-    model = get_model(model_name, "cifar10")
-    model.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
-    deserialize_time = time.time() - start_time
-    print(f"Model deserialized. Time taken: {deserialize_time:.2f} seconds")
+        # Deserialize the model
+        start_time = time.time()
+        model = get_model(model_name, "cifar10")
+        model.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
+        deserialize_time = time.time() - start_time
+        print(f"Model deserialized. Time taken: {deserialize_time:.2f} seconds")
 
-    # Log serialization and deserialization times
-    with open(TIME_FILE_PATH, "a") as f:
-        f.write(f"{model_name},{serialized_size},{serialize_time:.4f},{deserialize_time:.4f}\n")
+        # Log serialization and deserialization times
+        with open(TIME_FILE_PATH, "a") as f:
+            f.write(f"{model_name},{serialized_size},{serialize_time:.4f},{deserialize_time:.4f}\n")
 
 
 if __name__ == "__main__":
