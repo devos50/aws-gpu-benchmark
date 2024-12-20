@@ -7,14 +7,20 @@ from models import get_model
 import torch
 
 
-# MODELS_TO_TEST = ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152",
-#                   "efficientnet-b7",
-#                   "mobilenet_v3_large",
-#                   "vit-base-patch16-224", "vit-large-patch16-224",
-#                   "bert-base-uncased",
-#                   "dense121", "dense169", "dense201", "dense161"]
+MODELS_TO_TEST = ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152",
+                  "efficientnet-b7",
+                  "mobilenet_v3_large",
+                  "vit-base-patch16-224", "vit-large-patch16-224",
+                  "bert-base-uncased",
+                  "dense121", "dense169", "dense201", "dense161",
+                  "gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl",
+                  "roberta-base", "roberta-large",
+                  "distilbert-base-uncased", "distilbert-base-uncased-distilled-squad",
+                  "albert-base-v2", "albert-large-v2", "albert-xlarge-v2", "albert-xxlarge-v2",
+                  "t5-small", "t5-base", "t5-large", "t5-3b", "t5-11b",
+                  ]
 
-MODELS_TO_TEST = ["bert-base-uncased", "gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl"]
+MODELS_TO_TEST = ["albert-base-v2", "albert-large-v2", "albert-xlarge-v2", "albert-xxlarge-v2"]
 
 MODEL_PATH = os.path.join("data", "model.pt")
 TIME_FILE_PATH = os.path.join("data", "serialization_times.csv")
@@ -34,7 +40,7 @@ def benchmark_serialization_speed(model_name):
     if os.path.exists(MODEL_PATH):
         os.remove(MODEL_PATH)
 
-    for _ in range(10):
+    for run in range(11):
         model = get_model(model_name, "cifar10")
 
         # Serialize the model
@@ -66,8 +72,9 @@ def benchmark_serialization_speed(model_name):
             torch.cuda.empty_cache()
 
         # Log serialization and deserialization times
-        with open(TIME_FILE_PATH, "a") as f:
-            f.write(f"{model_name},{serialized_size},{serialize_time:.4f},{deserialize_time:.4f},{gpu_load_time:.4f}\n")
+        if run > 0:
+            with open(TIME_FILE_PATH, "a") as f:
+                f.write(f"{model_name},{serialized_size},{serialize_time:.4f},{deserialize_time:.4f},{gpu_load_time:.4f}\n")
 
         time.sleep(1)
 

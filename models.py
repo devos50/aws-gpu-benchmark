@@ -58,7 +58,7 @@ def get_model(model_name, dataset_name):
     elif model_name in ["distilbert-base-uncased", "distilbert-base-uncased-distilled-squad"]:
         from transformers import DistilBertForQuestionAnswering
         return DistilBertForQuestionAnswering.from_pretrained(model_name)
-    elif model_name in ["albert-base-v1", "albert-large-v1"]:
+    elif model_name in ["albert-base-v2", "albert-large-v2", "albert-xlarge-v2", "albert-xxlarge-v2"]:
         from transformers import AlbertForSequenceClassification
         return AlbertForSequenceClassification.from_pretrained(model_name)
     elif model_name in ["t5-small", "t5-base", "t5-large", "t5-3b", "t5-11b"]:
