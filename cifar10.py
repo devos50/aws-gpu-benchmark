@@ -7,9 +7,15 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from datasets import load_dataset
 
-from args import get_args, SUPPORTED_MODELS
+from args import get_args
 from models import get_model
 from transformations import get_transformation
+
+
+MODELS_TO_TEST = ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152",
+                  "efficientnet-b7",
+                  "mobilenet_v3_large",
+                  "vit-base-patch16-224", "vit-large-patch16-224"]
 
 
 cuda_available = torch.cuda.is_available()
@@ -113,7 +119,7 @@ def benchmark(args):
         labels = examples["label"]
         return {"images": images, "labels": labels}
 
-    models_to_test = SUPPORTED_MODELS if args.test_all else [args.model]
+    models_to_test = MODELS_TO_TEST if args.test_all else [args.model]
     for model_name in models_to_test:
         print("Testing model: %s, with dataset: %s" % (model_name, args.dataset))
         model = get_model(model_name, args.dataset)
@@ -137,12 +143,12 @@ def benchmark(args):
 
         # First, we perform a few batches to warm up the GPU and caches
         print("Running warm-up steps")
-        _ = train(model, model_name, train_loader, criterion, optimizer, log=False, max_steps=20)
+        _ = train(model, model_name, train_loader, criterion, optimizer, log=False, max_steps=10)
         print("Warm-up steps completed")
 
         # Main training loop
         for epoch in range(args.num_epochs):
-            train_loss, train_accuracy = train(model, model_name, train_loader, criterion, optimizer)
+            train_loss, train_accuracy = train(model, model_name, train_loader, criterion, optimizer, max_steps=20)
 
             print(f"Epoch {epoch+1}/{args.num_epochs}")
             print(f"Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy:.2f}%")
