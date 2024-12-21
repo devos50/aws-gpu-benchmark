@@ -197,7 +197,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--template",
-        choices=["p3", "g5"],
+        choices=["p3", "g4dn", "g5"],
         default="p3",
         help="The instance template."
     )
