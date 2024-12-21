@@ -22,6 +22,8 @@ templates = {
     }
 }
 
+REGIONS = ["us-east-1", "us-west-2", "ap-northeast-1", "eu-central-1", "sa-east-1"]
+
 
 def execute_ssh_command(instance_ip, key_file, username, command, blocking=True):
     """
@@ -37,7 +39,7 @@ def execute_ssh_command(instance_ip, key_file, username, command, blocking=True)
             username=username,
             key_filename=key_file,
         )
-        
+
         # Execute the command
         stdin, stdout, stderr = ssh_client.exec_command(command)
         
@@ -57,11 +59,9 @@ def execute_ssh_command(instance_ip, key_file, username, command, blocking=True)
 
 
 def get_all_ec2_instances():
-    regions = ["us-east-1", "us-west-2", "ap-northeast-1", "eu-central-1", "sa-east-1"]
-
     all_instances = []
 
-    for region in regions:
+    for region in REGIONS:
         print(f"Checking region: {region}")
         ec2 = boto3.client('ec2', region_name=region)
         
@@ -145,7 +145,7 @@ def terminate_instance(instance_id, region="us-east-1"):
         print(f"Error terminating instance {instance_id}: {e}")
         return None
     
-def conduct_model_transfer_speed_experiment():
+def conduct_model_transfer_speed_experiment(intra_region=False):
     instances = get_all_ec2_instances()
 
     # Kill the transfer.py process on all instances
@@ -164,6 +164,11 @@ def conduct_model_transfer_speed_experiment():
     print("Starting transfers...")
     for from_instance in instances:
         for to_instance in instances:
+            if intra_region and from_instance["Region"] != to_instance["Region"]:
+                continue
+            if not intra_region and from_instance["Region"] == to_instance["Region"]:
+                continue
+
             if from_instance["InstanceId"] == to_instance["InstanceId"]:
                 continue
 
@@ -177,7 +182,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Manage AWS EC2 Spot Instances")
     parser.add_argument(
         "action",
-        choices=["list", "spawn-instance", "test_model_transfer_speed", "terminate"],
+        choices=["list", "spawn-instance", "test_model_transfer_speed", "terminate", "terminate_all", "cmd"],
         help="Action to perform."
     )
     parser.add_argument(
@@ -201,6 +206,12 @@ if __name__ == "__main__":
         default="p3",
         help="The instance template."
     )
+    parser.add_argument(
+        "--cmd",
+        required = False,
+        help="The command to run on the instance."
+    )
+    parser.add_argument("--intra-region", action="store_true", help="Run the transfer speed test within the same region.")
 
     args = parser.parse_args()
 
@@ -215,9 +226,16 @@ if __name__ == "__main__":
     elif args.action == "spawn-instance":
         spawn_spot_instance(args.region, args.template)
     elif args.action == "test_model_transfer_speed":
-        conduct_model_transfer_speed_experiment()
+        conduct_model_transfer_speed_experiment(intra_region=args.intra_region)
     elif args.action == "terminate":
         terminate_instance(args.instance_id, region=args.region)
+    elif args.action == "terminate_all":
+        all_instances = get_all_ec2_instances()
+        print(f"Terminating {len(all_instances)} instances...")
+        for instance in all_instances:
+            terminate_instance(instance['InstanceId'], region=instance['Region'])
+    elif args.action == "cmd":
+        execute_ssh_command(args.ip, '/Users/martijndevos/.ssh/Amazon.pem', 'ubuntu', args.cmd)
     else:
         print("Invalid argument. Use 'list' to list running instances or 'spawn-instance' to spawn a Spot instance.")
         sys.exit(1)
