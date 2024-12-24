@@ -39,7 +39,14 @@ def init_data_dir():
 def benchmark_serialization_speed(model_name, storage_backend, instance):
     print(f"Testing serialization speed for model {model_name} (backend: {storage_backend})...")
 
-    MODEL_PATH = os.path.join("data", "model.pt") if storage_backend == "ebs" else "/opt/dlami/nvme/model.pt"
+    if storage_backend == "ebs":
+        MODEL_PATH = os.path.join("data", "model.pt")
+    elif storage_backend == "nvme":
+        MODEL_PATH = os.path.join("/mnt/nvme/model.pt")
+    elif storage_backend == "nfs":
+        MODEL_PATH = os.path.join("/nfs/model.pt")
+    else:
+        raise ValueError(f"Unknown storage backend: {storage_backend}")
 
     if os.path.exists(MODEL_PATH):
         os.remove(MODEL_PATH)
@@ -81,6 +88,8 @@ def benchmark_serialization_speed(model_name, storage_backend, instance):
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
+        os.unlink(MODEL_PATH)
+
         # Log serialization and deserialization times
         if run > 0:
             with open(TIME_FILE_PATH, "a") as f:
@@ -97,6 +106,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     print("Will test %d models." % len(MODELS_TO_TEST))
-    for storage_backend in ["ebs", "nvme"]:
+    for storage_backend in ["ebs", "nvme", "nfs"]:
         for model_name in MODELS_TO_TEST:
             benchmark_serialization_speed(model_name, storage_backend, args.instance)
