@@ -42,7 +42,7 @@ def benchmark_serialization_speed(model_name, storage_backend, instance):
     if storage_backend == "ebs":
         MODEL_PATH = os.path.join("data", "model.pt")
     elif storage_backend == "nvme":
-        MODEL_PATH = os.path.join("/mnt/nvme/model.pt")
+        MODEL_PATH = os.path.join("/opt/dlami/nvme/model.pt")
     elif storage_backend == "nfs":
         MODEL_PATH = os.path.join("/nfs/model.pt")
     else:
