@@ -43,7 +43,7 @@ def benchmark_serialization_speed(model_name, storage_backend, instance):
         MODEL_PATH = os.path.join("data", "model.pt")
     elif storage_backend == "nvme":
         nvme_base_path = "/opt/dlami/nvme"
-        if not osp.ath.exists(nvme_base_path):
+        if not os.path.exists(nvme_base_path):
             print(f"{instance} does not support NVME - skipping!")
             return
         MODEL_PATH = os.path.join(nvme_base_path, "model.pt")
